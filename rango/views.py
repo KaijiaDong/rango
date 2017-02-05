@@ -43,6 +43,10 @@ def show_category(request, category_name_slug):
 # Go render the response and return it to the client.
     return render(request, 'rango/category.html', context_dict)
 
+#def about(request):
+#   context_dict = {'yourname' : "This tutorial has been put together by Kaijia Dong.",
+#                    'test3' : "Rango says here is the about page"}
+#    return render(request, 'rango/about.html', context=context_dict)
+
 def about(request):
-    context_dict = {'yourname' : "This tutorial has been put together by Kaijia Dong."}
-    return render(request, 'rango/about.html', context=context_dict)
+    return HttpResponse("Rango says here is the about page.")
