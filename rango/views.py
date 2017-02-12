@@ -7,6 +7,8 @@ from rango.forms import PageForm
 from rango.forms import UserForm, UserProfileForm
 from django.contrib.auth import authenticate, login
 from django.http import HttpResponseRedirect, HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 
 def index(request):
 # Query the database for a list of ALL categories currently stored. # Order the categories by no. likes in descending order.
@@ -53,6 +55,8 @@ def about(request):
                     'test3' : "Rango says here is the about page"}
     return render(request, 'rango/about.html', context=context_dict)
 
+
+@login_required
 def add_category(request):
     form = CategoryForm()
 
@@ -77,6 +81,8 @@ def add_category(request):
     # Render the form with error messages (if any).
     return render(request, 'rango/add_category.html', {'form': form})
 
+
+@login_required
 def add_page(request, category_name_slug):
     try:
         category = Category.objects.get(slug=category_name_slug)
@@ -174,3 +180,15 @@ def user_login(request):
         # No context variables to pass to the template system, hence the
         # blank dictionary object...
         return render(request,'rango/login.html')
+
+@login_required
+def restricted(request):
+    return HttpResponse("Since you're logged in, you can see this text!")
+
+@login_required
+def user_logout(request):
+    # Since we know the user is logged in, we can now just log them out.
+    logout(request)
+
+    # Take the user back to the homepage.
+    return HttpResponseRedirect('/rango/')
