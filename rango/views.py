@@ -11,53 +11,51 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from datetime import datetime
 
+# A helper method
+def get_server_side_cookie(request, cookie, default_val=None):
+    val = request.session.get(cookie)
+
+    if not val:
+        val = default_val
+    return val
+
+# Updated the function definition
+def visitor_cookie_handler(request):
+    visits = int(get_server_side_cookie(request, 'visits', '1'))
+
+    last_visit_cookie = get_server_side_cookie(request,
+                                               'last_visit',
+                                               str(datetime.now()))
+    last_visit_time = datetime.strptime(last_visit_cookie[:-7],
+                                        '%Y-%m-%d %H:%M:%S')
+    # If it's been more than a day since the last visit...
+    if (datetime.now() - last_visit_time).days > 1:
+        visits = visits + 1
+        # update the last visit cookie now that we have updated the count
+        request.session['last_visit'] = str(datetime.now())
+    else:
+        visits = 1
+        # set the last visit cookie
+        request.session['last_visit'] = last_visit_cookie
+    # Update/set the visits cookie
+    request.session['visits'] = visits
+
 def index(request):
-# Query the database for a list of ALL categories currently stored. # Order the categories by no. likes in descending order.
-# Retrieve the top 5 only - or all if less than 5.
-# Place the list in our context_dict dictionary
-# that will be passed to the template engine.
+    request.session.set_test_cookie()
+    # Query the database for a list of ALL categories currently stored.
+    # Order the categories by no. likes in descending order.
+    # Retrieve the top 5 only - or all if less than 5.
+    # Place the list in our context_dict dictionary
+    # that will be passed to the template engine.
 
     category_list = Category.objects.order_by('-likes')[:5]
     page_list = Page.objects.order_by('-views')[:5]
-    context_dict = {'categories': category_list,
-                    'pages': page_list}
-
-
-    if request.session.get('last_visit'):
-    # The session has a value for the last visit
-        last_visit_time = request.session.get('last_visit')
-        visits = request.session.get('visits', 0)
-
-        if (datetime.now() - datetime.strptime(last_visit_time[:-7], "%Y-%m-%d %H:%M:%S")).days > 0:
-            request.session['visits'] = visits + 1
-            request.session['last_visit'] = str(datetime.now())
-    else:
-    # The get returns None, and the session does not have a value for the last visit.
-        request.session['last_visit'] = str(datetime.now())
-        request.session['visits'] = 1
+    context_dict = {'categories': category_list, 'pages': page_list}
+    visitor_cookie_handler(request)
+    context_dict['visits'] = request.session['visits']
 
     response = render(request, 'rango/index.html', context_dict)
-
-    visits = int(request.COOKIES.get('visits', '0'))
-
-# Does the cookie last_visit exist?
-    if 'last_visit' in request.COOKIES:
-    # Yes it does! Get the cookie's value.
-        last_visit = request.COOKIES['last_visit']
-    # Cast the value to a Python date/time object.
-        last_visit_time = datetime.strptime(last_visit[:-7], "%Y-%m-%d %H:%M:%S")
-
-    # If it's been more than a day since the last visit...
-        if (datetime.now() - last_visit_time).days > 0:
-        # ...reassign the value of the cookie to +1 of what it was before...
-            response.set_cookie('visits', visits + 1)
-        # ...and update the last visit cookie, too.
-            response.set_cookie('last_visit', datetime.now())
-    else:
-    # Cookie last_visit doesn't exist, so create it to the current date/time.
-        response.set_cookie('last_visit', datetime.now())
     return response
-
 
 
 def show_category(request, category_name_slug):
@@ -87,13 +85,13 @@ def show_category(request, category_name_slug):
     return render(request, 'rango/category.html', context_dict)
 
 def about(request):
-    context_dict = {'yourname' : "This tutorial has been put together by Kaijia Dong.",
-                    'test3' : "Rango says here is the about page"}
-    if request.session.get('visits'):
-        count = request.session.get('visits')
-    else:
-        count = 0
-    return render(request, 'rango/about.html', {'visits': count}, context=context_dict)
+
+
+    context_dict = {'yourname': "This tutorial has been put together by Kaijia Dong.",
+                    'test3': "Rango says here is the about page"}
+    visitor_cookie_handler(request)
+    context_dict['visits'] = request.session['visits']
+    return render(request, 'rango/about.html', context=context_dict)
 
 
 @login_required
