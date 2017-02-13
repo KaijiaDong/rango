@@ -9,20 +9,37 @@ from django.contrib.auth import authenticate, login
 from django.http import HttpResponseRedirect, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
+from datetime import datetime
 
 def index(request):
 # Query the database for a list of ALL categories currently stored. # Order the categories by no. likes in descending order.
 # Retrieve the top 5 only - or all if less than 5.
 # Place the list in our context_dict dictionary
 # that will be passed to the template engine.
+
     category_list = Category.objects.order_by('-likes')[:5]
     page_list = Page.objects.order_by('-views')[:5]
     context_dict = {'categories': category_list,
                     'pages': page_list}
-# Return a rendered response to send to the client.
-# We make use of the shortcut function to make our lives easier.
-# Note that the first parameter is the template we wish to use.
+
+
+    if request.session.get('last_visit'):
+    # The session has a value for the last visit
+        last_visit_time = request.session.get('last_visit')
+        visits = request.session.get('visits', 0)
+
+        if (datetime.now() - datetime.strptime(last_visit_time[:-7], "%Y-%m-%d %H:%M:%S")).days > 0:
+            request.session['visits'] = visits + 1
+            request.session['last_visit'] = str(datetime.now())
+    else:
+    # The get returns None, and the session does not have a value for the last visit.
+        request.session['last_visit'] = str(datetime.now())
+        request.session['visits'] = 1
+
     return render(request, 'rango/index.html', context_dict)
+
+
+
 
 def show_category(request, category_name_slug):
 # Create a context dictionary which we can pass # to the template rendering engine.
@@ -53,7 +70,11 @@ def show_category(request, category_name_slug):
 def about(request):
     context_dict = {'yourname' : "This tutorial has been put together by Kaijia Dong.",
                     'test3' : "Rango says here is the about page"}
-    return render(request, 'rango/about.html', context=context_dict)
+    if request.session.get('visits'):
+        count = request.session.get('visits')
+    else:
+        count = 0
+    return render(request, 'rango/about.html', {'visits': count}, context=context_dict)
 
 
 @login_required
